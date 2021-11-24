@@ -1,24 +1,40 @@
 import { MikroORM } from '@mikro-orm/core';
+import { ApolloServer } from 'apollo-server-express';
+import express from 'express';
+import { buildSchema } from 'type-graphql';
 import './constants';
 import { _prod } from './constants';
-import { Post } from './entities/Post';
+// import { Post } from './entities/Post';
 import config from './mikro-orm.config';
+import { HelloResolver } from './resolvers/hello';
 
 const main = async () => {
 	const orm = await MikroORM.init(config);
-
-	// await orm.isConnected();
 	orm.getMigrator().up();
+	const app = express();
 
-	const generator = orm.getSchemaGenerator();
-	await generator.updateSchema();
+	const apolloServer = new ApolloServer({
+		schema: await buildSchema({
+			resolvers: [HelloResolver],
+			validate: false,
+		}),
+	});
 
-	const post = orm.em.create(Post, { title: 'OK' });
-	await orm.em.persistAndFlush(post);
+	await apolloServer.start();
+	apolloServer.applyMiddleware({ app });
 
-	const posts = await orm.em.find(Post, {});
+	app.listen(8000, () => {
+		console.log('app listening on 8000');
+	});
+	// const generator = orm.getSchemaGenerator(;
+	// // await generator.updateSchema();
 
-	console.log('$$: ', posts);
+	// const post = orm.em.create(Post, { title: 'OK' });
+	// await orm.em.persistAndFlush(post);
+
+	// const posts = await orm.em.find(Post, {});
+
+	// console.log('$$: ', posts);
 };
 
 main().catch((err) => console.error(err));
